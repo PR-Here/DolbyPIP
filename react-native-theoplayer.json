@@ -1,6 +1,6 @@
 {
   "ios": {
-    "features": []
+    "features": ["PIP"]
   }
 }
 

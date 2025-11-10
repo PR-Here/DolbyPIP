@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect,  useRef, useState } from 'react';
 import {
+  DeviceEventEmitter,
   Platform,
   StatusBar,
   StyleSheet,
@@ -14,14 +15,31 @@ import {
   PlayerConfiguration,
   PlayerEventType,
   PresentationMode,
+  PresentationModeChangePipContext,
   THEOplayer,
+  THEOplayerView,
 } from 'react-native-theoplayer';
+import { useSafeAreaInsets, type EdgeInsets } from 'react-native-safe-area-context';
 import {
-  THEOplayerDefaultUi,
-  UIFeature,
+  UiContainer,
+  AutoFocusGuide,
+  ControlBar,
+  Spacer,
+  SettingsMenuButton,
+  QualitySubMenu,
+  PlaybackRateSubMenu,
+  CenteredControlBar,
+  SkipButton,
+  PlayButton,
+  SeekBar,
+  MuteButton,
+  GoToLiveButton,
+  TimeLabel,
+  PipButton,
+  FullscreenButton,
+  CenteredDelayedActivityIndicator,
+  DEFAULT_THEOPLAYER_THEME,
 } from '@theoplayer/react-native-ui';
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 
 const playerConfig: PlayerConfiguration = {
@@ -40,6 +58,89 @@ const source: SourceDescription = {
   ],
 };
 
+type PlayerSurfaceProps = {
+  hidden: boolean;
+  showControls: boolean;
+  insets: EdgeInsets;
+  onPlayerReady: (player: THEOplayer) => void;
+};
+
+const PlayerSurface = React.memo(
+  ({ hidden, showControls, insets, onPlayerReady }: PlayerSurfaceProps) => {
+    const [player, setPlayer] = useState<THEOplayer | null>(null);
+
+    const handleReady = useCallback(
+      (readyPlayer: THEOplayer) => {
+        setPlayer(readyPlayer);
+        onPlayerReady(readyPlayer);
+      },
+      [onPlayerReady],
+    );
+
+    return (
+      <View style={styles.player}>
+        <THEOplayerView
+          style={StyleSheet.absoluteFill}
+          config={playerConfig}
+          onPlayerReady={handleReady}>
+          {player !== null && (
+            <UiContainer
+              style={hidden ? styles.overlayHidden : undefined}
+              theme={{ ...DEFAULT_THEOPLAYER_THEME, fadeAnimationTimoutMs: 8000 }}
+              player={player}
+              behind={<CenteredDelayedActivityIndicator size={50} />}
+              topStyle={{ paddingTop: insets.top }}
+              bottomStyle={{ paddingBottom: insets.bottom }}
+              top={
+                showControls ? (
+                  <AutoFocusGuide>
+                    <ControlBar>
+                      <Spacer />
+                      <SettingsMenuButton>
+                        <QualitySubMenu />
+                        <PlaybackRateSubMenu />
+                      </SettingsMenuButton>
+                    </ControlBar>
+                  </AutoFocusGuide>
+                ) : null
+              }
+              center={
+                showControls ? (
+                  <AutoFocusGuide>
+                    <CenteredControlBar
+                      style={{ width: '50%' }}
+                      left={<SkipButton skip={-10} />}
+                      middle={<PlayButton />}
+                      right={<SkipButton skip={30} />}
+                    />
+                  </AutoFocusGuide>
+                ) : null
+              }
+              bottom={
+                showControls ? (
+                  <AutoFocusGuide>
+                    <ControlBar>
+                      <SeekBar />
+                    </ControlBar>
+                    <ControlBar>
+                      <MuteButton />
+                      <GoToLiveButton />
+                      <TimeLabel showDuration />
+                      <Spacer />
+                      <PipButton />
+                      <FullscreenButton />
+                    </ControlBar>
+                  </AutoFocusGuide>
+                ) : null
+              }
+            />
+          )}
+        </THEOplayerView>
+      </View>
+    );
+  },
+);
+
 function App(): React.JSX.Element {
   const playerRef = useRef<THEOplayer | null>(null);
   const presentationModeListenerRef = useRef<
@@ -52,29 +153,43 @@ function App(): React.JSX.Element {
   const [uiHidden, setUiHidden] = useState(false);
   const insets = useSafeAreaInsets();
 
-  const containerStyle = [
-    styles.root,
-    {
-      paddingTop:
-        insets.top > 0
-          ? insets.top
-          : Platform.OS === 'android'
-            ? StatusBar.currentHeight ?? 0
-            : 0,
-      paddingBottom: insets.bottom,
-    },
-  ];
+  useEffect(() => {
+    StatusBar.setHidden(false, 'fade');
+    return () => {
+      StatusBar.setHidden(false, 'fade');
+    };
+  }, []);
+
+  useEffect(() => {
+    const pictureInPictureSubscription = DeviceEventEmitter.addListener(
+      'DolbyPIP_onPictureInPictureModeChanged',
+      (inPip: boolean) => {
+        setUiHidden(inPip);
+        StatusBar.setHidden(inPip, 'fade');
+      },
+    );
+
+    return () => {
+      pictureInPictureSubscription.remove();
+    };
+  }, []);
 
   const onPlayerReady = useCallback((player: THEOplayer) => {
-    console.log('THEOplayer ready');
     playerRef.current = player;
 
     const handlePresentationModeChange = (
       event: PresentationModeChangeEvent,
     ) => {
       const mode = event.presentationMode;
+      const pipContext = event.context?.pip;
+
+      const transitioning =
+        pipContext === PresentationModeChangePipContext.TRANSITIONING_TO_PIP;
+      const enteringPip = mode === PresentationMode.pip || transitioning;
+
+      setUiHidden(enteringPip);
       setPresentationMode(mode);
-      setUiHidden(mode === PresentationMode.pip);
+      StatusBar.setHidden(enteringPip, 'fade');
     };
 
     const handleError = (event: ErrorEvent) => {
@@ -152,36 +267,28 @@ function App(): React.JSX.Element {
     };
   }, []);
 
-  const excludedFeatures = useMemo(() => {
-    if (uiHidden) {
-      return Object.values(UIFeature).filter(
-        (feature): feature is UIFeature => typeof feature === 'number',
-      );
-    }
-
-    return [UIFeature.Chromecast, UIFeature.PiP];
-  }, [uiHidden]);
-
-
   return (
-    <SafeAreaView style={containerStyle}>
-      <THEOplayerDefaultUi
-        style={{ flex: 1, }}
-        config={playerConfig}
+    <View style={styles.root}>
+      <PlayerSurface
+        hidden={uiHidden}
+        showControls={!uiHidden}
+        insets={insets}
         onPlayerReady={onPlayerReady}
-        excludedFeatures={excludedFeatures}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#000',
   },
   player: {
     flex: 1,
+  },
+  overlayHidden: {
+    opacity: 0,
+    pointerEvents: 'none',
   },
 });
 
