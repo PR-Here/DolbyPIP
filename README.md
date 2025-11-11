@@ -1,118 +1,250 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+This is a [**React Native**](https://reactnative.dev) project with **Picture-in-Picture (PiP)** functionality using [THEOplayer](https://www.theoplayer.com/), bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
-# Getting Started
+# 🎬 DolbyPIP - React Native Video Player with PiP Support
+
+This project demonstrates how to implement Picture-in-Picture (PiP) video playback in React Native using THEOplayer SDK. The implementation supports both **Android** and **iOS** platforms with seamless transitions, background audio, and custom UI controls.
+
+## ✨ Features
+
+- ✅ **Picture-in-Picture (PiP)** - Video continues playing in a floating window
+- ✅ **Automatic PiP Entry** - Automatically enters PiP when app goes to background (Android)
+- ✅ **Manual PiP Control** - User can trigger PiP via button in controls
+- ✅ **Background Audio** - Audio continues playing in background
+- ✅ **Seamless Transitions** - No video restart when entering/exiting PiP
+- ✅ **UI Controls Management** - Controls automatically hide/show based on PiP state
+- ✅ **Platform-Specific Optimization** - Optimized for both Android and iOS
+- ✅ **Safe Area Support** - Proper handling of notches and system bars
+
+## 📋 Requirements
+
+- **React Native**: 0.82.1+
+- **Node.js**: >= 20
+- **Android**: API 24+ (Android 7.0+) for PiP support
+- **iOS**: iOS 15.0+ for PiP support
+- **THEOplayer License**: Valid THEOplayer React Native license key required
+
+## 🚀 Quick Start
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
 
-## Project Structure
+### Step 1: Install Dependencies
+
+```sh
+# Install npm dependencies
+npm install
+
+# For iOS, install CocoaPods dependencies
+cd ios && pod install && cd ..
+```
+
+### Step 2: Configure THEOplayer License
+
+1. Open `App.tsx`
+2. Replace the `license` key in `playerConfig` with your valid THEOplayer license:
+
+```typescript
+const playerConfig: PlayerConfiguration = {
+  license: 'YOUR_THEOPLAYER_LICENSE_KEY',
+  // ...
+};
+```
+
+### Step 3: Run the App
+
+```sh
+# Start Metro bundler
+npm start
+
+# Run on Android (in a new terminal)
+npm run android
+
+# Run on iOS (in a new terminal)
+npm run ios
+```
+
+## 📁 Project Structure
 
 ```
 .
-├── App.tsx                     # Main React component wiring THEOplayer and PiP logic
-├── index.js                    # Entry point registering SafeAreaProvider + App
-├── react-native-theoplayer.json# iOS feature configuration for THEOplayer
+├── App.tsx                          # Main React component with PiP logic
+├── index.js                         # Entry point with SafeAreaProvider wrapper
+├── babel.config.js                  # Babel configuration with reanimated plugin
+├── react-native-theoplayer.json     # iOS feature configuration for THEOplayer
+├── PIP_IMPLEMENTATION_STEPS.md      # Detailed PiP implementation documentation
 ├── package.json
 ├── README.md
-├── android/                    # Native Android project (Gradle, manifest, sources)
-├── ios/                        # Native iOS project (Xcode workspace, pods)
-└── node_modules/               # Installed npm dependencies
+├── android/                         # Native Android project
+│   ├── app/src/main/
+│   │   ├── AndroidManifest.xml      # PiP configuration and permissions
+│   │   └── java/com/dolbypip/
+│   │       └── MainActivity.kt      # Native PiP event emitter
+│   └── gradle.properties            # THEOplayer PiP reparenting flag
+├── ios/                             # Native iOS project
+│   └── DolbyPIP/
+│       ├── Info.plist               # Background audio mode for PiP
+│       └── AppDelegate.swift        # AVAudioSession configuration
+└── node_modules/
 ```
 
-Key files:
+## 🔑 Key Files
 
-- `App.tsx`: Initializes `THEOplayerDefaultUi`, handles PiP transitions, hides the UI in PiP, and configures error logging.
-- `android/app/src/main/AndroidManifest.xml`: Enables PiP (`supportsPictureInPicture`, reparent flag) and other app metadata.
-- `ios/DolbyPIP/AppDelegate.swift`: Configures `AVAudioSession` for background/PiP playback.
-- `react-native-theoplayer.json`: Declares optional THEOplayer integrations for iOS builds.
+### React Native Files
 
-## Step 1: Start Metro
+- **`App.tsx`**: 
+  - Initializes THEOplayer with PiP configuration
+  - Handles PiP transitions and UI visibility
+  - Manages presentation mode changes
+  - Configures background audio
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+- **`index.js`**: 
+  - Wraps app with `SafeAreaProvider` for safe area insets
+  - Registers app component
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- **`react-native-theoplayer.json`**: 
+  - Declares PIP feature for iOS builds
 
-```sh
-# Using npm
-npm start
+- **`babel.config.js`**: 
+  - Configures Babel with `react-native-reanimated/plugin` for animations
 
-# OR using Yarn
-yarn start
-```
+### Android Files
 
-## Step 2: Build and run your app
+- **`android/app/src/main/AndroidManifest.xml`**: 
+  - Enables PiP support (`supportsPictureInPicture="true"`)
+  - Configures activity for PiP mode changes
+  - Sets up resizeable activity
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+- **`android/app/src/main/java/com/dolbypip/MainActivity.kt`**: 
+  - Emits native PiP events to JavaScript
+  - Handles `onPictureInPictureModeChanged` callback
 
-### Android
+- **`android/gradle.properties`**: 
+  - Enables THEOplayer PiP reparenting (`THEOplayer_reparent_on_PiP=true`)
 
-```sh
-# Using npm
-npm run android
+### iOS Files
 
-# OR using Yarn
-yarn android
-```
+- **`ios/DolbyPIP/Info.plist`**: 
+  - Adds `UIBackgroundModes` with `audio` for background playback
 
-### iOS
+- **`ios/DolbyPIP/AppDelegate.swift`**: 
+  - Configures `AVAudioSession` for background/PiP playback
+  - Sets audio session category to `.playback`
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## 📚 Dependencies
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+### Core Dependencies
 
-```sh
-bundle install
-```
+- **`react-native-theoplayer`**: THEOplayer React Native SDK
+- **`@theoplayer/react-native-ui`**: THEOplayer UI components
 
-Then, and every time you update your native dependencies, run:
+### Supporting Dependencies
 
-```sh
-bundle exec pod install
-```
+- **`react-native-safe-area-context`**: Safe area insets for notches/system bars
+- **`react-native-reanimated`**: Animations for UI components
+- **`react-native-worklets`**: Required for reanimated
+- **`react-native-svg`**: SVG support for UI components
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## 🔧 PiP Configuration
 
-```sh
-# Using npm
-npm run ios
+### Android Configuration
 
-# OR using Yarn
-yarn ios
-```
+1. **AndroidManifest.xml**: 
+   - `android:supportsPictureInPicture="true"` - Enables PiP
+   - `android:configChanges` - Handles configuration changes
+   - `android:resizeableActivity="true"` - Multi-window support
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+2. **gradle.properties**: 
+   - `THEOplayer_reparent_on_PiP=true` - Enables PiP reparenting
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+3. **MainActivity.kt**: 
+   - Overrides `onPictureInPictureModeChanged` to emit events to JavaScript
 
-## Step 3: Modify your app
+### iOS Configuration
 
-Now that you have successfully run the app, let's make changes!
+1. **Info.plist**: 
+   - `UIBackgroundModes` with `audio` - Enables background audio
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+2. **AppDelegate.swift**: 
+   - Configures `AVAudioSession` with `.playback` category
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+3. **react-native-theoplayer.json**: 
+   - Adds `"PIP"` to iOS features array
+   - **Note**: After modifying this file, run `cd ios && pod install && cd ..` to apply changes
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## 📖 Detailed Documentation
 
-## Congratulations! :tada:
+For a complete step-by-step guide on implementing PiP, see **[PIP_IMPLEMENTATION_STEPS.md](./PIP_IMPLEMENTATION_STEPS.md)** which includes:
 
-You've successfully run and modified your React Native App. :partying_face:
+- Detailed implementation steps
+- Code examples and explanations
+- Platform-specific configurations
+- Troubleshooting guide
+- Testing checklist
+- References and resources
 
-### Now what?
+## 🎯 How PiP Works
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+1. **User triggers PiP**: User presses home button (Android) or PiP button
+2. **Native event**: Android/iOS system enters PiP mode
+3. **Event emission**: Native code emits event to JavaScript (Android)
+4. **THEOplayer event**: `PRESENTATIONMODE_CHANGE` event fires
+5. **UI update**: Controls hide, status bar hides, video continues
+6. **Exit PiP**: Process reverses, controls reappear
 
-# Troubleshooting
+## 🧪 Testing
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+### Android Testing
 
-# Learn More
+- Test on Android 7.0+ (API 24+)
+- Press home button to trigger automatic PiP
+- Use PiP button in controls for manual PiP
+- Verify video continues playing without restart
+- Check that controls hide in PiP mode
 
-To learn more about React Native, take a look at the following resources:
+### iOS Testing
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- Test on iOS 15.0+
+- Use PiP button in controls
+- Verify background audio works
+- Check smooth transitions
+- Verify no black screens
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Video not playing**: Check THEOplayer license key
+2. **PiP not working**: Verify platform requirements (Android 7.0+, iOS 15.0+)
+3. **Controls showing in PiP**: Check `uiHidden` state and event listeners
+4. **Video restarting**: Ensure single `THEOplayerView` instance
+5. **Black screen in PiP**: Check safe area insets and container styles
+
+For more troubleshooting, see [PIP_IMPLEMENTATION_STEPS.md](./PIP_IMPLEMENTATION_STEPS.md).
+
+## 📝 License
+
+This project uses THEOplayer, which requires a valid license. Replace the license key in `App.tsx` with your own THEOplayer license.
+
+## 🔗 Resources
+
+- [THEOplayer React Native Documentation](https://optiview.dolby.com/docs/theoplayer/getting-started/frameworks/react-native/)
+- [THEOplayer PiP Documentation](https://github.com/THEOplayer/react-native-theoplayer/blob/master/doc/pip.md)
+- [Android PiP Guide](https://developer.android.com/develop/ui/views/picture-in-picture)
+- [iOS PiP Guide](https://developer.apple.com/documentation/avkit/adopting_picture_in_picture_in_a_custom_player)
+- [React Native Documentation](https://reactnative.dev/docs/getting-started)
+
+---
+
+## 📝 Additional Notes
+
+### Development Tips
+
+- Use **Fast Refresh** for instant updates when modifying `App.tsx`
+- For Android: Press <kbd>R</kbd> twice or <kbd>Ctrl</kbd>+<kbd>M</kbd> (Windows/Linux) / <kbd>Cmd ⌘</kbd>+<kbd>M</kbd> (macOS) to reload
+- For iOS: Press <kbd>R</kbd> in Simulator to reload
+- Build directly from Android Studio or Xcode for native debugging
+
+### Integration
+
+- To integrate this into an existing app, see [React Native Integration guide](https://reactnative.dev/docs/integration-with-existing-apps)
+- Ensure all dependencies are installed before building
+- Verify THEOplayer license is valid before deploying to production
